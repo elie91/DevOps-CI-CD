@@ -1,0 +1,38 @@
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: postgres-deployment
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      component: postgres
+  template:
+    metadata:
+      labels:
+        component: postgres
+    spec:
+      # allocate the storage
+      volumes:
+        - name: postgres-storage
+          persistentVolumeClaim:
+            # match the name specify in the file database-persistent-volume-claim
+            claimName: database-persistent-volume-claim
+      containers:
+        - name: postgres
+          image: postgres
+          args: [ "--vm", "1", "--vm-bytes", "150M", "--vm-hang", "1" ]
+          ports:
+            - containerPort: 5432
+          volumeMounts:
+            - name: postgres-storage
+              mountPath: /var/lib/postgresql/Data
+          env:
+            - name: POSTGRES_PASSWORD
+              value: /data/postgres
+            - name: POSTGRES_DB
+              value: db
+            - name: POSTGRES_USER
+              value: user
+            - name: POSTGRES_PASSWORD
+              value: password

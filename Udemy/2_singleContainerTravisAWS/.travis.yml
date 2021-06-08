@@ -1,0 +1,23 @@
+language: generic
+sudo: required
+services:
+    - docker
+
+before_install:
+    - docker build -t elie91/frontend -f Dockerfile.dev .
+    - docker ps -a
+
+script:
+    - docker run -e CI=true elie91/frontend yarn test
+
+deploy: 
+    provider: elasticbeanstalk
+    region: "us-east-2"
+    app: "UdemyDockerReact"
+    env: "Udemydockerreact-env-1"
+    bucket_name: "elasticbeanstalk-us-east-2-537777817379"
+    bucket_path: "UdemyDockerReact"
+    on:
+        branch: master
+    access_key_id: $AWS_ACCESS_KEY
+    secret_access_key: $AWS_SECRET_KEY

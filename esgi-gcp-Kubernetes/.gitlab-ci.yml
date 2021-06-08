@@ -1,0 +1,131 @@
+image: docker:latest
+
+services:
+  - docker:dind
+
+stages:
+  - test
+  - build
+  - deploy
+
+test:
+  stage: test
+  script: echo "Running tests"
+
+
+.docker-login:
+  before_script:
+    - echo $DOCKER_PASSWORD | docker login -u $DOCKER_USERNAME --password-stdin
+
+build_front:
+  stage: build
+  extends: .docker-login
+  script: 
+    - docker build -t elie91/esgi2020-front ./front
+    - docker push elie91/esgi2020-front
+  only:
+    changes:
+      - front/Dockerfile
+      - front/js/*
+      - front/index.html
+
+build_back:
+  stage: build
+  extends: .docker-login
+  script: 
+    - docker build -t elie91/esgi2020-back  ./back
+    - docker push elie91/esgi2020-back
+  only:
+    changes:
+      - back/Dockerfile
+      - back/src/*
+      - back/templates/*
+      - back/config/*
+      - back/.env
+
+build_nginx:
+  stage: build
+  extends: .docker-login
+  script: 
+    - docker build -t elie91/esgi2020-nginx ./nginx
+    - docker push elie91/esgi2020-nginx
+  only:
+    changes:
+      - nginx/Dockerfile
+
+build_nginxback:
+  stage: build
+  extends: .docker-login
+  script: 
+    - docker build -t elie91/esgi2020-nginxback ./back/docker/nginx
+    - docker push elie91/esgi2020-nginxback
+  only:
+    changes:
+      - back/docker/nginx/Dockerfile
+
+build_google:
+  stage: build
+  image: google/cloud-sdk
+  services:
+    - docker:dind
+  script: 
+    - echo "$GCP_SERVICE_KEY" > gcloud-service-key.json 
+    - gcloud auth activate-service-account --key-file gcloud-service-key.json
+    - gcloud config set project $GCP_PROJECT_ID
+
+# deploy_stage:
+#   stage: deploy
+#   image: google/cloud-sdk
+#   script: 
+#     - echo "Deploy to production server"
+#     - config_kubernetes
+#     - apply_and_rollout
+#   environment:
+#     name: staging
+#     url: https://$CI_ENVIRONMENT_SLUG.$CI_PROJECT_NAME.$MY_DOMAIN
+
+deploy_prod:
+  stage: deploy
+  image: google/cloud-sdk
+  script: 
+    - echo "Deploy to production server"
+    - config_kubernetes
+    - apply_and_rollout
+  environment:
+    name: prod
+    url: https://$CI_ENVIRONMENT_SLUG.$CI_PROJECT_NAME.$MY_DOMAIN
+
+
+# Custom Functions -------------------------------------------------------
+.custom_functions: &custom_functions |
+  export VERSION=$(echo $CI_COMMIT_SHA | cut -c8-25)
+  export SECRET_NAME=tls-$CI_PROJECT_NAME-$CI_ENVIRONMENT_SLUG
+  export REPLICAS=3
+  export TRACK=stable
+
+  function config_kubernetes() {
+    kubectl config set-cluster $KUBE_NAME --server="$KUBE_URL" --insecure-skip-tls-verify=true
+    kubectl config set-credentials cluster-admin --username="$KUBE_USER" --password="$KUBE_PASSWORD"
+    kubectl config set-context default --cluster=$KUBE_NAME --user=cluster-admin
+    kubectl config use-context default
+  }
+
+  function apply_and_rollout() {
+    kubectl apply -f k8s/job-migrations.yaml
+    kubectl apply -f k8s/database-persistent-volume-claim.yaml
+    kubectl apply -f k8s/postgres-deployment.yaml
+    kubectl apply -f k8s/postgres-cluster-ip-service.yaml
+    kubectl apply -f k8s/back-deployment.yaml
+    kubectl apply -f k8s/back-cluster-ip-service.yaml
+    kubectl apply -f k8s/nginxback-deployment.yaml
+    kubectl apply -f k8s/nginxback-cluster-ip-service.yaml
+    kubectl apply -f k8s/front-deployment.yaml
+    kubectl apply -f k8s/front-cluster-ip-service.yaml
+    kubectl apply -f k8s/ingress-service.yaml
+    kubectl apply -f k8s/gitlab-admin-service-account.yaml
+
+  }
+
+before_script:
+  - *custom_functions
+

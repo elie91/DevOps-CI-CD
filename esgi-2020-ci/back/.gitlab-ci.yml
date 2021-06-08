@@ -1,0 +1,19 @@
+stages:
+  - build
+  - deploy
+
+job:build:
+  image: composer
+  stage: build
+  script: composer install
+  cache:
+    paths:
+      - vendor
+
+job:deploy:
+  stage: deploy
+  script:
+    - gem install dpl
+    - dpl --provider=heroku --esgi2020ci --api-key=$HEROKU_STAGING_API_KEY
+  only:
+    - master

@@ -1,0 +1,52 @@
+version: '3.6'
+services:
+
+  nginx:
+    restart: always
+    build:
+      dockerfile: Dockerfile
+      context: ./nginx
+    ports:
+      - '3050:80'
+    depends_on:
+      - nginxback
+      - front
+
+  nginxback:
+    build: back/docker/nginx
+    depends_on:
+      - php
+
+  php:
+    build:
+      context: back
+      cache_from:
+        - php:7.4-fpm
+    volumes:
+      - ./back:/usr/share/nginx/html:cached
+      - ./back/vendor:/usr/share/nginx/html/vendor:delegated
+    depends_on:
+      - db
+
+  front:
+    build: front
+    volumes:
+      - /usr/share/nginx/html/node_modules
+      - ./front:/usr/share/nginx/html
+    stdin_open: true
+    tty: true
+
+  db:
+    image: postgres:12-alpine
+    volumes:
+      - postgres:/data/postgres
+    ports:
+      - 8081:5432
+    environment:
+      - PGDATA=/data/postgres
+      - POSTGRES_DB=db
+      - POSTGRES_USER=user
+      - POSTGRES_PASSWORD=password
+
+volumes:
+  postgres:

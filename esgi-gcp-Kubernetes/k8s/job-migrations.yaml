@@ -1,0 +1,13 @@
+apiVersion: batch/v1
+kind: Job
+metadata:
+  name: pi
+spec:
+  template:
+    spec:
+      containers:
+      - name: job-migrations
+        image: elie91/esgi2020-back
+        command: ["php",  "bin/console", "doctrine:migrations:migrate", "--no-interaction"]
+      restartPolicy: Never
+  backoffLimit: 6

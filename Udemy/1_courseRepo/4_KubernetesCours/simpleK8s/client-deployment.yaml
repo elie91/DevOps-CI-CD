@@ -1,0 +1,29 @@
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+    name: client-deployment
+spec:
+    # number of pode that this teamplate is meant to build
+    replicas: 1
+    selector:
+        matchLabels:
+            # le déployment gérera tous les pods ayant ce label
+            component: web
+    # config that will be use for every single pode on the deployment
+    template:
+        metadata:
+            # donne aux pods créé ce label; match avec le selector du deployment
+            labels:
+                component: web
+        spec:
+            containers:
+                - name: client
+                  image: stephengrider/multi-client
+                  resources:
+                      limits:
+                          memory: "128Mi"
+                          cpu: "500m"
+                  ports:
+                      # Exposing a port here gives the system additional information about the network connections a container uses
+                      # but is primarily informational. Not specifying a port here DOES NOT prevent that port from being exposed
+                      - containerPort: 3000

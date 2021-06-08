@@ -1,0 +1,29 @@
+Comment ce projet a été déployé sur AWS:
+
+service amazon utilisé: elastic beanstalk
+créer un nouveau environnement
+    - environnement de serveur web
+    - donner un nom à l'application
+    - Plateforme: Docker
+    - Code : exemple d'application
+
+On peut ensuite configurer .travis.yml: 
+    - l'option bucket_name: Aller dans la console AWS, service S3
+    - Trouver le compartiment correspondant au service crée plus haut (regarder la région)
+    - Clés d'accès: 
+        - Aller dans le service IAM, utilisateur
+        - Ajouter un utilisateur
+        - Type d'accès: Accès par programmation (travis n'a pas besoin d'avoir accès a la console)
+        - Autorisations: Attacher directement les stratégies existantes: 
+            - rechercher beanstalk
+            - cocher AWSElasticBeanstalkFullAccess
+            - balises: étape facultative
+            - créer le user
+            - copier la clé secréte et la clé d'accés
+    
+    - Aller dans la console travis, settings, variables d'environnement
+    - Créer deux variables d'environnement, pour la clé d'accès et la clé secréte
+    - Ajouter dans le travis.yml:  access_key_id: $AWS_ACCESS_KEY, secret_access_key: $AWS_SECRET_KEY
+
+
+https://537777817379.signin.aws.amazon.com/console

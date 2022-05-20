@@ -23,8 +23,7 @@ services:
       cache_from:
         - php:7.4-fpm
     volumes:
-      - ./back:/usr/share/nginx/html:cached
-      - ./back/vendor:/usr/share/nginx/html/vendor:delegated
+      - ./back:/usr/share/nginx/html
     depends_on:
       - db
 
